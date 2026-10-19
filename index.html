@@ -81,10 +81,12 @@ body {
   flex: 1;
   min-height: 0;
   display: flex;
-  overflow: auto;
+  overflow: hidden;       /* animasi balik halaman tidak memunculkan scrollbar */
   padding: var(--pad-top) var(--gutter) var(--pad-bottom);
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
+.viewport::-webkit-scrollbar { display: none; }
+.viewport.zoomed { overflow: auto; } /* saat diperbesar tetap bisa digeser, tanpa scrollbar terlihat */
 /* Lebar pasti dihitung di JS (mode satu/dua halaman); ini hanya cadangan */
 .stage {
   margin: auto;
@@ -506,6 +508,7 @@ body {
     zoomIdx = Math.min(Math.max(idx, 0), ZOOMS.length - 1);
     zoomOutBtn.disabled = zoomIdx === 0;
     zoomInBtn.disabled = zoomIdx === ZOOMS.length - 1;
+    viewport.classList.toggle("zoomed", zoomIdx > 0);
     layout();
     // jaga agar tengah buku tetap di tengah layar
     requestAnimationFrame(() => {
