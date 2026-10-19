@@ -91,6 +91,10 @@ body {
   flex: none;
   width: calc(min(100vw - 2 * var(--gutter), (100vh - var(--toolbar-h) - 90px) * 2.84) * var(--zoom));
 }
+/* Sampul depan tampil di separuh kanan, sampul belakang di separuh kiri → geser buku agar sampul di tengah */
+.stage.ready { transition: transform .75s cubic-bezier(.4, 0, .2, 1); }
+.stage.at-cover { transform: translateX(-25%); }
+.stage.at-back { transform: translateX(25%); }
 #book { filter: drop-shadow(0 18px 36px var(--shadow)); }
 .page { background: #1a1a1a; overflow: hidden; }
 .page img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; -webkit-user-drag: none; }
@@ -286,7 +290,7 @@ body {
   .counter { font-size: .9rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .nav, .tool, .thumb img, .toast { transition: none; }
+  .nav, .tool, .thumb img, .toast, .stage.ready { transition: none; }
 }
 </style>
 
@@ -372,6 +376,7 @@ body {
 
   // 1. Buat elemen halaman untuk flipbook
   const bookEl = document.getElementById("book");
+  const stage = document.querySelector(".stage");
   PAGES.forEach((p, i) => {
     const div = document.createElement("div");
     div.className = "page";
@@ -451,6 +456,9 @@ body {
     prevBtn.disabled = i <= 0;
     nextBtn.disabled = vis[vis.length - 1] >= LAST;
     thumbs.forEach((t, k) => t.classList.toggle("active", vis.includes(k)));
+    const spread = book.getOrientation() !== "portrait";
+    stage.classList.toggle("at-cover", spread && i === 0);
+    stage.classList.toggle("at-back", spread && i === LAST);
     try { history.replaceState(null, "", i === 0 ? location.pathname + location.search : `#p=${i + 1}`); } catch (e) {}
     if (nextBtn.disabled) stopPlay();
   }
@@ -458,7 +466,14 @@ body {
   book.on("flip", update);
   book.on("changeOrientation", update);
   book.on("init", update);
+  // Saat sampul mulai dibalik, buku bergeser ke posisi dua halaman bersamaan dengan animasinya;
+  // jika balikan dibatalkan, posisi dikembalikan saat buku diam lagi.
+  book.on("changeState", e => {
+    if (e.data === "flipping") stage.classList.remove("at-cover", "at-back");
+    if (e.data === "read") update();
+  });
   update();
+  setTimeout(() => stage.classList.add("ready"), 100); // tanpa animasi saat pertama dimuat
 
   prevBtn.addEventListener("click", () => book.flipPrev());
   nextBtn.addEventListener("click", () => book.flipNext());
@@ -471,7 +486,6 @@ body {
   const zoomInBtn = document.getElementById("zoomIn");
   const zoomOutBtn = document.getElementById("zoomOut");
   const viewport = document.getElementById("viewport");
-  const stage = document.querySelector(".stage");
   const settings = book.getSettings();
   const RATIO = 1400 / 986;
 
