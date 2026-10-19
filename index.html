@@ -249,6 +249,35 @@ body {
 .thumb span b { color: var(--fg); font-weight: 700; }
 .thumb.active span b { color: var(--accent); }
 
+/* Tombol kembali ke sampul — muncul di halaman terakhir */
+.restart {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(var(--toolbar-bottom), env(safe-area-inset-bottom, 0px)) + var(--toolbar-h) + 14px);
+  transform: translateX(-50%);
+  z-index: 7;
+  appearance: none;
+  height: 44px;
+  padding: 0 20px 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 700 .95rem var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+  animation: rise .35s ease-out;
+}
+.restart[hidden] { display: none; }
+.restart svg { width: 20px; height: 20px; }
+.restart:hover { filter: brightness(1.08); }
+.restart:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+@keyframes rise { from { opacity: 0; } }
+
 /* Notifikasi singkat */
 .toast {
   position: absolute;
@@ -290,9 +319,12 @@ body {
   .toolbar { padding-left: 14px; }
   .tool { width: 36px; height: 36px; }
   .counter { font-size: .9rem; }
+  /* tombol kembali ke sampul pindah ke pojok kanan bawah, sejajar toolbar, agar tidak menutupi halaman */
+  .restart { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); transform: none; bottom: max(var(--toolbar-bottom), env(safe-area-inset-bottom, 0px)); height: var(--toolbar-h); }
 }
 @media (prefers-reduced-motion: reduce) {
   .nav, .tool, .thumb img, .toast, .stage.ready { transition: none; }
+  .restart { animation: none; }
 }
 </style>
 
@@ -335,6 +367,11 @@ body {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path id="fsIcon" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
     </button>
   </div>
+
+  <button class="restart" id="restart" type="button" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6"/><path d="M5.5 15a7.5 7.5 0 1 0 1.3-8.1L4 10"/></svg>
+    Kembali ke sampul
+  </button>
 
   <div class="grid-layer" id="gridLayer" hidden role="dialog" aria-modal="true" aria-labelledby="gridTitle">
     <div class="grid-head">
@@ -443,6 +480,9 @@ body {
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
   const counter = document.getElementById("counter");
+  const restartBtn = document.getElementById("restart");
+  let playTimer = null; // dipakai update() sejak awal (mis. dibuka langsung di halaman terakhir)
+  restartBtn.addEventListener("click", () => book.flip(0));
 
   function visiblePages(i) {
     if (book.getOrientation() === "portrait" || i === 0 || i === LAST) return [i];
@@ -457,6 +497,7 @@ body {
     counter.textContent = `${shown} / ${TOTAL}`;
     prevBtn.disabled = i <= 0;
     nextBtn.disabled = vis[vis.length - 1] >= LAST;
+    restartBtn.hidden = !nextBtn.disabled;
     thumbs.forEach((t, k) => t.classList.toggle("active", vis.includes(k)));
     const spread = book.getOrientation() !== "portrait";
     stage.classList.toggle("at-cover", spread && i === 0);
@@ -523,7 +564,6 @@ body {
   // 6. Putar otomatis
   const playBtn = document.getElementById("playBtn");
   const playIcon = document.getElementById("playIcon");
-  let playTimer = null;
   function startPlay() {
     if (nextBtn.disabled) book.flip(0);
     playTimer = setInterval(() => book.flipNext(), 4000);
@@ -587,6 +627,7 @@ body {
     if (!gridLayer.hidden) return;
     if (e.key === "ArrowRight") book.flipNext();
     if (e.key === "ArrowLeft") book.flipPrev();
+    if (e.key === "Home") book.flip(0);
     if (e.key === "+" || e.key === "=") setZoom(zoomIdx + 1);
     if (e.key === "-") setZoom(zoomIdx - 1);
   });
